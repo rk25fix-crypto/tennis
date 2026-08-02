@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>テニス対戦管理アプリ</title>
+    <title>テニス組み合わせアプリ</title>
     <style>
         :root {
             --primary: #2e7d32;
@@ -15,6 +15,7 @@
             --subtext: #666666;
             --border: #e0e0e0;
             --win: #2980b9;
+            --danger: #d32f2f;
         }
 
         * {
@@ -129,6 +130,7 @@
 
         .btn:active { transform: scale(0.98); opacity: 0.9; }
         .btn-accent { background: var(--accent); color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
 
         .input-group {
             display: flex;
@@ -154,12 +156,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
+            padding: 12px 0;
             border-bottom: 1px solid #f0f0f0;
         }
 
         .player-item.paused {
             opacity: 0.5;
+            background-color: #fafafa;
         }
 
         .player-info {
@@ -171,15 +174,15 @@
         .player-actions {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         /* トグルスイッチ */
         .switch {
             position: relative;
             display: inline-block;
-            width: 44px;
-            height: 24px;
+            width: 48px;
+            height: 26px;
         }
 
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -190,27 +193,28 @@
             top: 0; left: 0; right: 0; bottom: 0;
             background-color: #ccc;
             transition: .3s;
-            border-radius: 24px;
+            border-radius: 26px;
         }
 
         .slider:before {
             position: absolute;
             content: "";
-            height: 18px; width: 18px;
+            height: 20px; width: 20px;
             left: 3px; bottom: 3px;
             background-color: white;
             transition: .3s;
             border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         input:checked + .slider { background-color: var(--primary); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        input:checked + .slider:before { transform: translateX(22px); }
 
         .del-btn {
-            background: #ff4d4d;
-            color: #fff;
+            background: #e0e0e0;
+            color: #555;
             border: none;
-            padding: 6px 10px;
+            padding: 6px 12px;
             border-radius: 6px;
             font-size: 0.8rem;
             font-weight: bold;
@@ -356,7 +360,7 @@
 </head>
 <body>
 
-<header>🎾 テニスマネージャー</header>
+<header>🎾 テニス組み合わせアプリ</header>
 
 <!-- 1. 試合タブ -->
 <div id="page-match" class="page active">
@@ -366,7 +370,7 @@
             <button class="btn btn-accent" style="width:auto; padding:8px 16px; font-size:0.9rem;" id="btn-generate">次の試合を組む</button>
         </h2>
         <div id="current-matches">
-            <p style="text-align:center; color:#888; padding:24px 0;">「⚙️ 設定」タブでメンバーを4人以上追加（アクティブ）してください</p>
+            <p style="text-align:center; color:#888; padding:24px 0;">「⚙️ 設定」タブでメンバーを追加し、<br>参加スイッチをONにしてください</p>
         </div>
     </div>
 
@@ -388,13 +392,13 @@
     <div class="card">
         <h2>コート設定</h2>
         <div style="display:flex; align-items:center; gap:12px;">
-            <label style="font-weight:bold; font-size:0.95rem;">コート数:</label>
+            <label style="font-weight:bold; font-size:0.95rem;">利用するコート数:</label>
             <input type="number" id="court-count" value="1" min="1" max="10" style="width:80px; text-align:center;">
         </div>
     </div>
 
     <div class="card">
-        <h2>メンバー追加・参加設定</h2>
+        <h2>メンバー追加</h2>
         <div class="input-group">
             <input type="text" id="new-name" placeholder="名前を入力（例: 田中）">
             <div class="input-row">
@@ -406,15 +410,22 @@
                     <option value="5">中上級</option>
                     <option value="6">上級</option>
                 </select>
-                <button class="btn" id="btn-add-player" style="flex:1;">追加</button>
+                <button class="btn" id="btn-add-player" style="flex:1;">追加する</button>
             </div>
         </div>
         
-        <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0 10px;">
-            <span style="font-weight:bold; font-size:0.95rem;">登録メンバー (<span id="player-count">0</span>人)</span>
-            <button id="btn-reset-stats" style="background:none; border:none; color:#e74c3c; font-size:0.85rem; text-decoration:underline; cursor:pointer;">成績リセット</button>
+        <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
+            <span style="font-weight:bold; font-size:1.05rem;">メンバー一覧・参加設定 (<span id="player-count">0</span>人)</span>
+            <p style="font-size:0.8rem; color:#888; margin:4px 0 10px;">遅れてくる人や休む人はスイッチをOFFにしてください</p>
+            <div id="player-list"></div>
         </div>
-        <div id="player-list"></div>
+    </div>
+
+    <!-- リセット機能専用カード -->
+    <div class="card" style="border: 1px solid #ffcdd2; background: #fff5f5;">
+        <h2 style="color: var(--danger); border-left-color: var(--danger);">データリセット</h2>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:12px;">メンバー一覧は残したまま、これまでの「試合履歴」と「成績データ」のみをゼロに戻します。</p>
+        <button class="btn btn-danger" id="btn-reset-stats">履歴と成績をリセット</button>
     </div>
 </div>
 
@@ -423,7 +434,7 @@
     <div class="card">
         <h2>相性抜群！最強ペア TOP3 🔥</h2>
         <div id="top-pairs-list">
-            <p style="text-align:center; color:#888; padding:12px 0; font-size:0.9rem;">2試合以上の対戦データから集計されます</p>
+            <p style="text-align:center; color:#888; padding:12px 0; font-size:0.9rem;">1試合以上の対戦データから集計されます</p>
         </div>
     </div>
 
@@ -464,7 +475,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     let players = JSON.parse(localStorage.getItem('tennis_players')) || [];
     let historyPairs = JSON.parse(localStorage.getItem('tennis_history_pairs')) || {};
-    let pairStats = JSON.parse(localStorage.getItem('tennis_pair_stats')) || {}; // ペアの勝敗統計用
+    let pairStats = JSON.parse(localStorage.getItem('tennis_pair_stats')) || {}; 
     let matchLogs = JSON.parse(localStorage.getItem('tennis_match_logs')) || [];
     let activeMatches = JSON.parse(localStorage.getItem('tennis_active_matches')) || [];
     let activeResting = JSON.parse(localStorage.getItem('tennis_active_resting')) || [];
@@ -516,14 +527,14 @@ document.addEventListener("DOMContentLoaded", function () {
             level: parseInt(levelInput.value),
             matches: 0,
             wins: 0,
-            active: true // 参加フラグ
+            active: true 
         });
         nameInput.value = '';
         saveData();
     });
 
     bindClick('btn-reset-stats', function() {
-        if(confirm('試合数・勝敗・対戦履歴データを全リセットしますか？')) {
+        if(confirm('【確認】メンバーは残したまま、これまでの試合履歴と成績データを全リセットします。よろしいですか？')) {
             players.forEach(p => { p.matches = 0; p.wins = 0; });
             historyPairs = {};
             pairStats = {};
@@ -532,6 +543,7 @@ document.addEventListener("DOMContentLoaded", function () {
             activeResting = [];
             document.getElementById('current-matches').innerHTML = '<p style="text-align:center; color:#888; padding:24px 0;">「次の試合を組む」を押してください</p>';
             saveData();
+            alert('リセットが完了しました。');
         }
     });
 
@@ -544,23 +556,31 @@ document.addEventListener("DOMContentLoaded", function () {
             if(p.active === undefined) p.active = true;
             const div = document.createElement('div');
             div.className = `player-item ${p.active ? '' : 'paused'}`;
+            
+            // 参加状態テキストのスタイル出し分け
+            const activeStatusText = p.active 
+                ? '<span style="font-size:0.75rem; font-weight:bold; color:var(--primary);">参加中</span>'
+                : '<span style="font-size:0.75rem; font-weight:bold; color:#999;">休む</span>';
+
             div.innerHTML = `
                 <div class="player-info">
                     <span style="font-weight:bold; font-size:1rem;">${p.name}</span> 
                     <span class="badge">${levelLabels[p.level] || '-'}</span>
                 </div>
                 <div class="player-actions">
-                    <label class="switch">
-                        <input type="checkbox" class="toggle-active" data-id="${p.id}" ${p.active ? 'checked' : ''}>
-                        <span class="slider"></span>
-                    </label>
-                    <button class="del-btn" data-id="${p.id}">削除</button>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        ${activeStatusText}
+                        <label class="switch">
+                            <input type="checkbox" class="toggle-active" data-id="${p.id}" ${p.active ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <button class="del-btn" data-id="${p.id}">✖ 削除</button>
                 </div>
             `;
             list.appendChild(div);
         });
 
-        // 参加スイッチ制御
         document.querySelectorAll('.toggle-active').forEach(chk => {
             chk.onchange = function() {
                 const id = this.getAttribute('data-id');
@@ -572,9 +592,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
         document.querySelectorAll('.del-btn').forEach(btn => {
             const handler = function() {
-                const id = this.getAttribute('data-id');
-                players = players.filter(p => p.id !== id);
-                saveData();
+                if(confirm('このメンバーを削除しますか？')) {
+                    const id = this.getAttribute('data-id');
+                    players = players.filter(p => p.id !== id);
+                    saveData();
+                }
             };
             btn.addEventListener('touchend', (e) => { e.preventDefault(); handler.call(btn); }, {passive: false});
             btn.addEventListener('click', handler);
@@ -583,11 +605,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     bindClick('btn-generate', function() {
         const courts = parseInt(document.getElementById('court-count').value) || 1;
-        // 参加中（active）のメンバーのみ抽出
         const activePlayers = players.filter(p => p.active !== false);
 
         if(activePlayers.length < 4) {
-            alert('試合を行うには【参加中】のメンバーが最低4人必要です。「⚙️ 設定」でスイッチをONにしてください。');
+            alert('試合を行うには【参加中】のメンバーが最低4人必要です。「⚙️ 設定」タブでスイッチをONにしてください。');
             return;
         }
 
@@ -680,7 +701,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         historyPairs[wKey] = (historyPairs[wKey] || 0) + 1;
                         historyPairs[lKey] = (historyPairs[lKey] || 0) + 1;
 
-                        // ペアの勝敗統計
                         pairStats[wKey] = pairStats[wKey] || { wins: 0, matches: 0, names: `${wTeam[0].name} & ${wTeam[1].name}` };
                         pairStats[lKey] = pairStats[lKey] || { wins: 0, matches: 0, names: `${lTeam[0].name} & ${lTeam[1].name}` };
                         pairStats[wKey].wins++;
@@ -737,14 +757,14 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function renderRanking() {
-        // 最強ペアの計算と描画
         const pairContainer = document.getElementById('top-pairs-list');
         if(pairContainer) {
-            let validPairs = Object.values(pairStats).filter(p => p.matches >= 2);
+            // 条件変更：1試合以上のデータから集計
+            let validPairs = Object.values(pairStats).filter(p => p.matches >= 1);
             validPairs.sort((a,b) => (b.wins/b.matches) - (a.wins/a.matches) || b.wins - a.wins);
 
             if(validPairs.length === 0) {
-                pairContainer.innerHTML = '<p style="text-align:center; color:#888; padding:12px 0; font-size:0.9rem;">2試合以上の対戦データから集計されます</p>';
+                pairContainer.innerHTML = '<p style="text-align:center; color:#888; padding:12px 0; font-size:0.9rem;">1試合以上の対戦データから集計されます</p>';
             } else {
                 pairContainer.innerHTML = '';
                 validPairs.slice(0, 3).forEach((pair, idx) => {
@@ -765,13 +785,12 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        // 個人ランキング描画
         const tbody = document.getElementById('ranking-body');
         tbody.innerHTML = '';
         
         let sorted = [...players].sort((a, b) => {
             const rateA = a.matches > 0 ? (a.wins / a.matches) : 0;
-            const rateB = b.matches > 0 ? (b.wins / b.matches) : 0;
+            const rateB = b.matches > 0 ? (rateA === 0 && a.matches === 0) ? 0 : (b.wins / b.matches);
             return rateB !== rateA ? rateB - rateA : b.wins - a.wins;
         });
 
