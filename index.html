@@ -24,7 +24,6 @@
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             -webkit-tap-highlight-color: transparent;
-            user-select: none;
         }
 
         body {
@@ -73,7 +72,6 @@
             align-items: center;
             justify-content: center;
             gap: 4px;
-            touch-action: manipulation;
         }
 
         .tab-btn.active {
@@ -124,7 +122,6 @@
             font-size: 1rem;
             cursor: pointer;
             text-align: center;
-            touch-action: manipulation;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
@@ -148,8 +145,6 @@
             border-radius: 8px;
             font-size: 1rem;
             background: #fff;
-            appearance: none;
-            -webkit-appearance: none;
         }
 
         .player-item {
@@ -177,7 +172,7 @@
             gap: 12px;
         }
 
-        /* トグルスイッチ */
+        /* トグルスイッチのCSS（復活） */
         .switch {
             position: relative;
             display: inline-block;
@@ -219,7 +214,6 @@
             font-size: 0.8rem;
             font-weight: bold;
             cursor: pointer;
-            touch-action: manipulation;
         }
 
         .match-card {
@@ -282,7 +276,6 @@
             font-weight: bold;
             font-size: 0.9rem;
             cursor: pointer;
-            touch-action: manipulation;
         }
 
         .history-list {
@@ -496,20 +489,18 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function switchTab(tabId) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
         document.getElementById('page-' + tabId).classList.add('active');
         document.getElementById('nav-' + tabId).classList.add('active');
         if (tabId === 'ranking') renderRanking();
     }
 
-    // タブの切り替えイベント（標準のonclickを使用）
-    document.getElementById('nav-match').onclick = () => switchTab('match');
-    document.getElementById('nav-ranking').onclick = () => switchTab('ranking');
-    document.getElementById('nav-settings').onclick = () => switchTab('settings');
+    document.getElementById('nav-match').addEventListener('click', function() { switchTab('match'); });
+    document.getElementById('nav-ranking').addEventListener('click', function() { switchTab('ranking'); });
+    document.getElementById('nav-settings').addEventListener('click', function() { switchTab('settings'); });
 
-    // メンバー追加
-    document.getElementById('btn-add-player').onclick = function() {
+    document.getElementById('btn-add-player').addEventListener('click', function() {
         const nameInput = document.getElementById('new-name');
         const levelInput = document.getElementById('new-level');
         const name = nameInput.value.trim();
@@ -525,12 +516,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         nameInput.value = '';
         saveData();
-    };
+    });
 
-    // リセットボタン
-    document.getElementById('btn-reset-stats').onclick = function() {
+    document.getElementById('btn-reset-stats').addEventListener('click', function() {
         if(confirm('【確認】メンバーは残したまま、これまでの試合履歴と成績データを全リセットします。よろしいですか？')) {
-            players.forEach(p => { p.matches = 0; p.wins = 0; });
+            players.forEach(function(p) { p.matches = 0; p.wins = 0; });
             historyPairs = {};
             pairStats = {};
             matchLogs = [];
@@ -540,18 +530,17 @@ document.addEventListener("DOMContentLoaded", function () {
             saveData();
             alert('リセットが完了しました。');
         }
-    };
+    });
 
-    // メンバー一覧描画
     function renderSettings() {
         const list = document.getElementById('player-list');
         list.innerHTML = '';
         document.getElementById('player-count').innerText = players.length;
         
-        players.forEach(p => {
+        players.forEach(function(p) {
             if(p.active === undefined) p.active = true;
             const div = document.createElement('div');
-            div.className = `player-item ${p.active ? '' : 'paused'}`;
+            div.className = 'player-item' + (p.active ? '' : ' paused');
             
             const activeStatusText = p.active 
                 ? '<span style="font-size:0.75rem; font-weight:bold; color:var(--primary);">参加中</span>'
@@ -576,39 +565,36 @@ document.addEventListener("DOMContentLoaded", function () {
             list.appendChild(div);
         });
 
-        // 参加スイッチ変更
-        document.querySelectorAll('.toggle-active').forEach(chk => {
-            chk.onchange = function() {
+        document.querySelectorAll('.toggle-active').forEach(function(chk) {
+            chk.addEventListener('change', function() {
                 const id = this.getAttribute('data-id');
-                const target = players.find(p => p.id === id);
+                const target = players.find(function(p) { return p.id === id; });
                 if(target) target.active = this.checked;
                 saveData();
-            };
+            });
         });
 
-        // 削除ボタン
-        document.querySelectorAll('.del-btn').forEach(btn => {
-            btn.onclick = function() {
+        document.querySelectorAll('.del-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
                 if(confirm('このメンバーを削除しますか？')) {
                     const id = this.getAttribute('data-id');
-                    players = players.filter(p => p.id !== id);
+                    players = players.filter(function(p) { return p.id !== id; });
                     saveData();
                 }
-            };
+            });
         });
     }
 
-    // 試合生成
-    document.getElementById('btn-generate').onclick = function() {
+    document.getElementById('btn-generate').addEventListener('click', function() {
         const courts = parseInt(document.getElementById('court-count').value) || 1;
-        const activePlayers = players.filter(p => p.active !== false);
+        const activePlayers = players.filter(function(p) { return p.active !== false; });
 
         if(activePlayers.length < 4) {
             alert('試合を行うには【参加中】のメンバーが最低4人必要です。「⚙️ 設定」タブでスイッチをONにしてください。');
             return;
         }
 
-        let sorted = [...activePlayers].sort(() => Math.random() - 0.5).sort((a, b) => a.matches - b.matches);
+        let sorted = activePlayers.slice().sort(function() { return Math.random() - 0.5; }).sort(function(a, b) { return a.matches - b.matches; });
         const need = Math.min(courts * 4, Math.floor(activePlayers.length / 4) * 4);
         const selected = sorted.slice(0, need);
         activeResting = sorted.slice(need);
@@ -616,7 +602,7 @@ document.addEventListener("DOMContentLoaded", function () {
         let bestMatches = [], bestScore = Infinity;
 
         for(let iter = 0; iter < 100; iter++) {
-            let temp = [...selected].sort(() => Math.random() - 0.5);
+            let temp = selected.slice().sort(function() { return Math.random() - 0.5; });
             let curMatches = [], score = 0;
 
             for(let i=0; i<temp.length; i+=4) {
@@ -640,9 +626,8 @@ document.addEventListener("DOMContentLoaded", function () {
         activeMatches = bestMatches;
         saveData();
         renderActiveMatches();
-    };
+    });
 
-    // 進行中試合の描画
     function renderActiveMatches() {
         const container = document.getElementById('current-matches');
         container.innerHTML = '';
@@ -653,7 +638,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
         
-        activeMatches.forEach((m, idx) => {
+        activeMatches.forEach(function(m, idx) {
             const card = document.createElement('div');
             card.className = 'match-card';
 
@@ -677,19 +662,18 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                 `;
 
-                // 勝敗記録ボタン
-                card.querySelectorAll('.win-btn').forEach(btn => {
-                    btn.onclick = function() {
+                card.querySelectorAll('.win-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
                         const winner = this.getAttribute('data-winner');
                         const wTeam = winner === '1' ? m.team1 : m.team2;
                         const lTeam = winner === '1' ? m.team2 : m.team1;
 
-                        [...wTeam, ...lTeam].forEach(p => {
-                            const target = players.find(pl => pl.id === p.id);
+                        wTeam.concat(lTeam).forEach(function(p) {
+                            const target = players.find(function(pl) { return pl.id === p.id; });
                             if(target) target.matches++;
                         });
-                        wTeam.forEach(p => {
-                            const target = players.find(pl => pl.id === p.id);
+                        wTeam.forEach(function(p) {
+                            const target = players.find(function(pl) { return pl.id === p.id; });
                             if(target) target.wins++;
                         });
 
@@ -699,8 +683,8 @@ document.addEventListener("DOMContentLoaded", function () {
                         historyPairs[wKey] = (historyPairs[wKey] || 0) + 1;
                         historyPairs[lKey] = (historyPairs[lKey] || 0) + 1;
 
-                        pairStats[wKey] = pairStats[wKey] || { wins: 0, matches: 0, names: `${wTeam[0].name} & ${wTeam[1].name}` };
-                        pairStats[lKey] = pairStats[lKey] || { wins: 0, matches: 0, names: `${lTeam[0].name} & ${lTeam[1].name}` };
+                        pairStats[wKey] = pairStats[wKey] || { wins: 0, matches: 0, names: wTeam[0].name + " & " + wTeam[1].name };
+                        pairStats[lKey] = pairStats[lKey] || { wins: 0, matches: 0, names: lTeam[0].name + " & " + lTeam[1].name };
                         pairStats[wKey].wins++;
                         pairStats[wKey].matches++;
                         pairStats[lKey].matches++;
@@ -708,23 +692,22 @@ document.addEventListener("DOMContentLoaded", function () {
                         matchLogs.unshift({
                             id: Date.now(),
                             court: m.court,
-                            winner: `${wTeam[0].name} & ${wTeam[1].name}`,
-                            loser: `${lTeam[0].name} & ${lTeam[1].name}`
+                            winner: wTeam[0].name + " & " + wTeam[1].name,
+                            loser: lTeam[0].name + " & " + lTeam[1].name
                         });
 
                         activeMatches[idx].finished = true;
                         saveData();
                         renderActiveMatches();
-                    };
+                    });
                 });
             }
             container.appendChild(card);
         });
 
-        document.getElementById('resting-players').innerText = activeResting.length > 0 ? activeResting.map(p => p.name).join('、 ') : '全員出場中！';
+        document.getElementById('resting-players').innerText = activeResting.length > 0 ? activeResting.map(function(p) { return p.name; }).join('、 ') : '全員出場中！';
     }
 
-    // 履歴描画
     function renderHistory() {
         const container = document.getElementById('match-history-list');
         if(!container) return;
@@ -735,7 +718,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         container.innerHTML = '';
-        matchLogs.forEach((log, index) => {
+        matchLogs.forEach(function(log, index) {
             const div = document.createElement('div');
             div.className = 'history-item';
             div.innerHTML = `
@@ -753,18 +736,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ランキング描画
     function renderRanking() {
         const pairContainer = document.getElementById('top-pairs-list');
         if(pairContainer) {
-            let validPairs = Object.values(pairStats).filter(p => p.matches >= 1);
-            validPairs.sort((a,b) => (b.wins/b.matches) - (a.wins/a.matches) || b.wins - a.wins);
+            let validPairs = Object.values(pairStats).filter(function(p) { return p.matches >= 1; });
+            validPairs.sort(function(a,b) { return (b.wins/b.matches) - (a.wins/a.matches) || b.wins - a.wins; });
 
             if(validPairs.length === 0) {
                 pairContainer.innerHTML = '<p style="text-align:center; color:#888; padding:12px 0; font-size:0.9rem;">1試合以上の対戦データから集計されます</p>';
             } else {
                 pairContainer.innerHTML = '';
-                validPairs.slice(0, 3).forEach((pair, idx) => {
+                validPairs.slice(0, 3).forEach(function(pair, idx) {
                     const rate = Math.round((pair.wins / pair.matches) * 100);
                     pairContainer.innerHTML += `
                         <div class="pair-rank-card">
@@ -785,13 +767,13 @@ document.addEventListener("DOMContentLoaded", function () {
         const tbody = document.getElementById('ranking-body');
         tbody.innerHTML = '';
         
-        let sorted = [...players].sort((a, b) => {
+        let sorted = players.slice().sort(function(a, b) {
             const rateA = a.matches > 0 ? (a.wins / a.matches) : 0;
-            const rateB = b.matches > 0 ? (rateA === 0 && a.matches === 0) ? 0 : (b.wins / b.matches);
+            const rateB = b.matches > 0 ? (b.wins / b.matches) : 0;
             return rateB !== rateA ? rateB - rateA : b.wins - a.wins;
         });
 
-        sorted.forEach((p, idx) => {
+        sorted.forEach(function(p, idx) {
             const rate = p.matches > 0 ? Math.round((p.wins / p.matches) * 100) : 0;
             tbody.innerHTML += `
                 <tr>
