@@ -503,19 +503,13 @@ document.addEventListener("DOMContentLoaded", function () {
         if (tabId === 'ranking') renderRanking();
     }
 
-    const bindClick = (id, fn) => {
-        const el = document.getElementById(id);
-        if(el) {
-            el.addEventListener('touchend', (e) => { e.preventDefault(); fn(); }, {passive: false});
-            el.addEventListener('click', fn);
-        }
-    };
+    // タブの切り替えイベント（標準のonclickを使用）
+    document.getElementById('nav-match').onclick = () => switchTab('match');
+    document.getElementById('nav-ranking').onclick = () => switchTab('ranking');
+    document.getElementById('nav-settings').onclick = () => switchTab('settings');
 
-    bindClick('nav-match', () => switchTab('match'));
-    bindClick('nav-ranking', () => switchTab('ranking'));
-    bindClick('nav-settings', () => switchTab('settings'));
-
-    bindClick('btn-add-player', function() {
+    // メンバー追加
+    document.getElementById('btn-add-player').onclick = function() {
         const nameInput = document.getElementById('new-name');
         const levelInput = document.getElementById('new-level');
         const name = nameInput.value.trim();
@@ -531,9 +525,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         nameInput.value = '';
         saveData();
-    });
+    };
 
-    bindClick('btn-reset-stats', function() {
+    // リセットボタン
+    document.getElementById('btn-reset-stats').onclick = function() {
         if(confirm('【確認】メンバーは残したまま、これまでの試合履歴と成績データを全リセットします。よろしいですか？')) {
             players.forEach(p => { p.matches = 0; p.wins = 0; });
             historyPairs = {};
@@ -545,8 +540,9 @@ document.addEventListener("DOMContentLoaded", function () {
             saveData();
             alert('リセットが完了しました。');
         }
-    });
+    };
 
+    // メンバー一覧描画
     function renderSettings() {
         const list = document.getElementById('player-list');
         list.innerHTML = '';
@@ -557,7 +553,6 @@ document.addEventListener("DOMContentLoaded", function () {
             const div = document.createElement('div');
             div.className = `player-item ${p.active ? '' : 'paused'}`;
             
-            // 参加状態テキストのスタイル出し分け
             const activeStatusText = p.active 
                 ? '<span style="font-size:0.75rem; font-weight:bold; color:var(--primary);">参加中</span>'
                 : '<span style="font-size:0.75rem; font-weight:bold; color:#999;">休む</span>';
@@ -581,6 +576,7 @@ document.addEventListener("DOMContentLoaded", function () {
             list.appendChild(div);
         });
 
+        // 参加スイッチ変更
         document.querySelectorAll('.toggle-active').forEach(chk => {
             chk.onchange = function() {
                 const id = this.getAttribute('data-id');
@@ -590,20 +586,20 @@ document.addEventListener("DOMContentLoaded", function () {
             };
         });
 
+        // 削除ボタン
         document.querySelectorAll('.del-btn').forEach(btn => {
-            const handler = function() {
+            btn.onclick = function() {
                 if(confirm('このメンバーを削除しますか？')) {
                     const id = this.getAttribute('data-id');
                     players = players.filter(p => p.id !== id);
                     saveData();
                 }
             };
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); handler.call(btn); }, {passive: false});
-            btn.addEventListener('click', handler);
         });
     }
 
-    bindClick('btn-generate', function() {
+    // 試合生成
+    document.getElementById('btn-generate').onclick = function() {
         const courts = parseInt(document.getElementById('court-count').value) || 1;
         const activePlayers = players.filter(p => p.active !== false);
 
@@ -644,8 +640,9 @@ document.addEventListener("DOMContentLoaded", function () {
         activeMatches = bestMatches;
         saveData();
         renderActiveMatches();
-    });
+    };
 
+    // 進行中試合の描画
     function renderActiveMatches() {
         const container = document.getElementById('current-matches');
         container.innerHTML = '';
@@ -680,8 +677,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                 `;
 
+                // 勝敗記録ボタン
                 card.querySelectorAll('.win-btn').forEach(btn => {
-                    const handler = function() {
+                    btn.onclick = function() {
                         const winner = this.getAttribute('data-winner');
                         const wTeam = winner === '1' ? m.team1 : m.team2;
                         const lTeam = winner === '1' ? m.team2 : m.team1;
@@ -718,8 +716,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         saveData();
                         renderActiveMatches();
                     };
-                    btn.addEventListener('touchend', (e) => { e.preventDefault(); handler.call(btn); }, {passive: false});
-                    btn.addEventListener('click', handler);
                 });
             }
             container.appendChild(card);
@@ -728,6 +724,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById('resting-players').innerText = activeResting.length > 0 ? activeResting.map(p => p.name).join('、 ') : '全員出場中！';
     }
 
+    // 履歴描画
     function renderHistory() {
         const container = document.getElementById('match-history-list');
         if(!container) return;
@@ -756,10 +753,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // ランキング描画
     function renderRanking() {
         const pairContainer = document.getElementById('top-pairs-list');
         if(pairContainer) {
-            // 条件変更：1試合以上のデータから集計
             let validPairs = Object.values(pairStats).filter(p => p.matches >= 1);
             validPairs.sort((a,b) => (b.wins/b.matches) - (a.wins/a.matches) || b.wins - a.wins);
 
