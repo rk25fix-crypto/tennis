@@ -2,92 +2,368 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>テニス対戦管理アプリ</title>
     <style>
-        :root { --primary: #2e7d32; --primary-light: #e8f5e9; --accent: #ff9800; --bg: #f4f6f4; --card: #fff; --text: #333; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: var(--text); padding-bottom: 80px; }
-        header { background: var(--primary); color: #fff; padding: 15px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 10; }
-        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; display: flex; border-top: 1px solid #ddd; z-index: 10; }
-        .tab-btn { flex: 1; padding: 15px 0; text-align: center; font-size: 0.9rem; color: #777; font-weight: bold; cursor: pointer; }
-        .tab-btn.active { color: var(--primary); border-top: 3px solid var(--primary); background: var(--primary-light); }
-        .page { display: none; padding: 15px; max-width: 600px; margin: 0 auto; }
+        :root {
+            --primary: #2e7d32;
+            --primary-light: #e8f5e9;
+            --accent: #ff9800;
+            --bg: #f4f6f4;
+            --card: #ffffff;
+            --text: #222222;
+            --subtext: #666666;
+            --border: #e0e0e0;
+            --win: #2980b9;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            padding-bottom: 90px;
+            font-size: 16px;
+        }
+
+        header {
+            background: var(--primary);
+            color: #fff;
+            padding: 16px;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            display: flex;
+            border-top: 1px solid var(--border);
+            z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 0;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--subtext);
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            touch-action: manipulation;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--primary-light);
+            border-top: 3px solid var(--primary);
+        }
+
+        .tab-icon { font-size: 1.3rem; }
+
+        .page {
+            display: none;
+            padding: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
         .page.active { display: block; }
-        .card { background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        h2 { font-size: 1rem; color: var(--primary); margin-bottom: 10px; border-left: 4px solid var(--accent); padding-left: 8px; }
-        .btn { width: 100%; background: var(--primary); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; }
-        .btn:active { opacity: 0.8; }
-        .btn-accent { background: var(--accent); }
-        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
-        .input-group input { flex: 2; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; }
-        .input-group select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; }
-        .player-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-        .del-btn { background: #e74c3c; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
-        .match-card { border: 1px solid var(--primary-light); border-radius: 8px; margin-bottom: 15px; overflow: hidden; background: #fff; }
-        .match-header { background: var(--primary-light); padding: 8px; font-size: 0.9rem; font-weight: bold; color: var(--primary); text-align: center; }
-        .match-body { display: flex; align-items: center; justify-content: space-between; padding: 15px; }
-        .team { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 5px; }
-        .player-chip { background: #f1f2f6; padding: 6px; border-radius: 6px; font-size: 0.9rem; font-weight: bold; }
-        .win-btn { margin-top: 8px; background: #3498db; color: #fff; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .ranking-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .ranking-table th, .ranking-table td { padding: 10px; text-align: center; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-        .ranking-table th { background: var(--primary-light); color: var(--primary); }
-        .badge { background: #7f8c8d; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+
+        .card {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        h2 {
+            font-size: 1.05rem;
+            color: var(--primary);
+            margin-bottom: 12px;
+            border-left: 5px solid var(--accent);
+            padding-left: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn {
+            width: 100%;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: center;
+            touch-action: manipulation;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-accent { background: var(--accent); color: #fff; }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .input-row { display: flex; gap: 8px; }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: #fff;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .player-item:last-child { border-bottom: none; }
+
+        .del-btn {
+            background: #ff4d4d;
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .match-card {
+            border: 2px solid var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+        }
+
+        .match-header {
+            background: var(--primary-light);
+            padding: 10px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-align: center;
+        }
+
+        .match-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 10px;
+            gap: 8px;
+        }
+
+        .team {
+            flex: 1;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .player-chip {
+            background: #f5f6f8;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border: 1px solid #eef0f2;
+        }
+
+        .vs-divider {
+            font-weight: 900;
+            color: #bdc3c7;
+            font-size: 1.1rem;
+            padding: 0 4px;
+        }
+
+        .win-btn {
+            margin-top: 6px;
+            background: var(--win);
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        /* 試合履歴エリアのスタイル */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-item {
+            background: #fafafa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 0.88rem;
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            color: var(--subtext);
+            font-size: 0.78rem;
+            margin-bottom: 6px;
+            border-bottom: 1px dashed #e0e0e0;
+            padding-bottom: 4px;
+        }
+
+        .history-item-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: bold;
+        }
+
+        .winner-text { color: var(--primary); }
+        .loser-text { color: #888; }
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .ranking-table th, .ranking-table td {
+            padding: 12px 8px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            font-size: 0.95rem;
+        }
+
+        .ranking-table th {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .badge {
+            background: #8e9eab;
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
     </style>
 </head>
 <body>
 
 <header>🎾 テニスマネージャー</header>
 
+<!-- 1. 試合タブ -->
 <div id="page-match" class="page active">
     <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h2>現在の試合</h2>
-            <button class="btn btn-accent" style="width:auto; padding:8px 15px;" id="btn-generate">次の試合を組む</button>
-        </div>
+        <h2>
+            現在の試合
+            <button class="btn btn-accent" style="width:auto; padding:8px 16px; font-size:0.9rem;" id="btn-generate">次の試合を組む</button>
+        </h2>
         <div id="current-matches">
-            <p style="text-align:center; color:#777; padding:20px 0;">「⚙️ 設定」タブでメンバーを4人以上追加してください</p>
+            <p style="text-align:center; color:#888; padding:24px 0;">「⚙️ 設定」タブでメンバーを4人以上追加してください</p>
         </div>
     </div>
+
     <div class="card">
-        <h2>お休み（待機）</h2>
-        <div id="resting-players" style="font-size:0.9rem; color:#555;">待機メンバーはいません</div>
+        <h2>お休み（待機メンバー）</h2>
+        <div id="resting-players" style="font-size:0.95rem; color:#555; padding:4px 0;">待機メンバーはいません</div>
+    </div>
+
+    <!-- 新設：対戦履歴表示エリア -->
+    <div class="card">
+        <h2>これまでの対戦履歴 📋</h2>
+        <div id="match-history-list" class="history-list">
+            <p style="text-align:center; color:#888; padding:12px 0; font-size:0.9rem;">まだ終了した試合はありません</p>
+        </div>
     </div>
 </div>
 
+<!-- 2. 設定タブ -->
 <div id="page-settings" class="page">
     <div class="card">
         <h2>コート設定</h2>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <label>利用コート数:</label>
-            <input type="number" id="court-count" value="1" min="1" max="10" style="padding:8px; width:60px; border:1px solid #ccc; border-radius:6px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <label style="font-weight:bold; font-size:0.95rem;">コート数:</label>
+            <input type="number" id="court-count" value="1" min="1" max="10" style="width:80px; text-align:center;">
         </div>
     </div>
 
     <div class="card">
         <h2>メンバー追加</h2>
         <div class="input-group">
-            <input type="text" id="new-name" placeholder="名前を入力">
-            <select id="new-level">
-                <option value="1">初心者</option>
-                <option value="2">初級</option>
-                <option value="3" selected>初中級</option>
-                <option value="4">中級</option>
-                <option value="5">中上級</option>
-                <option value="6">上級</option>
-            </select>
-            <button class="btn" id="btn-add-player" style="flex:1;">追加</button>
+            <input type="text" id="new-name" placeholder="名前を入力（例: 田中）">
+            <div class="input-row">
+                <select id="new-level">
+                    <option value="1">初心者</option>
+                    <option value="2">初級</option>
+                    <option value="3" selected>初中級</option>
+                    <option value="4">中級</option>
+                    <option value="5">中上級</option>
+                    <option value="6">上級</option>
+                </select>
+                <button class="btn" id="btn-add-player" style="flex:1;">追加</button>
+            </div>
         </div>
         
-        <div style="display:flex; justify-content:space-between; margin:15px 0 5px;">
-            <span style="font-weight:bold; font-size:0.9rem;">登録メンバー (<span id="player-count">0</span>人)</span>
-            <button id="btn-reset-stats" style="background:none; border:none; color:#e74c3c; font-size:0.8rem; text-decoration:underline; cursor:pointer;">成績リセット</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0 10px;">
+            <span style="font-weight:bold; font-size:0.95rem;">登録メンバー (<span id="player-count">0</span>人)</span>
+            <button id="btn-reset-stats" style="background:none; border:none; color:#e74c3c; font-size:0.85rem; text-decoration:underline; cursor:pointer;">成績リセット</button>
         </div>
         <div id="player-list"></div>
     </div>
 </div>
 
+<!-- 3. 成績タブ -->
 <div id="page-ranking" class="page">
     <div class="card">
         <h2>勝率ランキング 👑</h2>
@@ -106,24 +382,37 @@
     </div>
 </div>
 
-<div class="tab-bar">
-    <div class="tab-btn active" id="nav-match">🎾 試合</div>
-    <div class="tab-btn" id="nav-ranking">👑 成績</div>
-    <div class="tab-btn" id="nav-settings">⚙️ 設定</div>
-</div>
+<!-- ボトムナビゲーション -->
+<nav class="tab-bar">
+    <div class="tab-btn active" id="nav-match">
+        <span class="tab-icon">🎾</span>
+        <span>試合</span>
+    </div>
+    <div class="tab-btn" id="nav-ranking">
+        <span class="tab-icon">👑</span>
+        <span>成績</span>
+    </div>
+    <div class="tab-btn" id="nav-settings">
+        <span class="tab-icon">⚙️</span>
+        <span>設定</span>
+    </div>
+</nav>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     let players = JSON.parse(localStorage.getItem('tennis_players')) || [];
     let historyPairs = JSON.parse(localStorage.getItem('tennis_history_pairs')) || {};
+    let matchLogs = JSON.parse(localStorage.getItem('tennis_match_logs')) || []; // 対戦ログ用
     const levelLabels = { 1:"初心者", 2:"初級", 3:"初中級", 4:"中級", 5:"中上級", 6:"上級" };
 
     function saveData() {
         localStorage.setItem('tennis_players', JSON.stringify(players));
         localStorage.setItem('tennis_history_pairs', JSON.stringify(historyPairs));
+        localStorage.setItem('tennis_match_logs', JSON.stringify(matchLogs));
         localStorage.setItem('tennis_courts', document.getElementById('court-count').value);
         renderSettings();
         renderRanking();
+        renderHistory();
     }
 
     function switchTab(tabId) {
@@ -134,11 +423,19 @@ document.addEventListener("DOMContentLoaded", function () {
         if (tabId === 'ranking') renderRanking();
     }
 
-    document.getElementById('nav-match').onclick = () => switchTab('match');
-    document.getElementById('nav-ranking').onclick = () => switchTab('ranking');
-    document.getElementById('nav-settings').onclick = () => switchTab('settings');
+    const bindClick = (id, fn) => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('touchend', (e) => { e.preventDefault(); fn(); }, {passive: false});
+            el.addEventListener('click', fn);
+        }
+    };
 
-    document.getElementById('btn-add-player').onclick = function() {
+    bindClick('nav-match', () => switchTab('match'));
+    bindClick('nav-ranking', () => switchTab('ranking'));
+    bindClick('nav-settings', () => switchTab('settings'));
+
+    bindClick('btn-add-player', function() {
         const nameInput = document.getElementById('new-name');
         const levelInput = document.getElementById('new-level');
         const name = nameInput.value.trim();
@@ -153,16 +450,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         nameInput.value = '';
         saveData();
-    };
+    });
 
-    document.getElementById('btn-reset-stats').onclick = function() {
-        if(confirm('試合数と勝敗データをリセットしますか？')) {
+    bindClick('btn-reset-stats', function() {
+        if(confirm('試合数・勝敗・対戦履歴データを全リセットしますか？')) {
             players.forEach(p => { p.matches = 0; p.wins = 0; });
             historyPairs = {};
-            document.getElementById('current-matches').innerHTML = '<p style="text-align:center; color:#777; padding:20px 0;">「次の試合を組む」を押してください</p>';
+            matchLogs = [];
+            document.getElementById('current-matches').innerHTML = '<p style="text-align:center; color:#888; padding:24px 0;">「次の試合を組む」を押してください</p>';
             saveData();
         }
-    };
+    });
 
     function renderSettings() {
         const list = document.getElementById('player-list');
@@ -174,7 +472,7 @@ document.addEventListener("DOMContentLoaded", function () {
             div.className = 'player-item';
             div.innerHTML = `
                 <div>
-                    <span style="font-weight:bold;">${p.name}</span> 
+                    <span style="font-weight:bold; font-size:1rem;">${p.name}</span> 
                     <span class="badge">${levelLabels[p.level] || '-'}</span>
                 </div>
                 <button class="del-btn" data-id="${p.id}">削除</button>
@@ -183,15 +481,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         document.querySelectorAll('.del-btn').forEach(btn => {
-            btn.onclick = function() {
+            const handler = function() {
                 const id = this.getAttribute('data-id');
                 players = players.filter(p => p.id !== id);
                 saveData();
             };
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); handler.call(btn); }, {passive: false});
+            btn.addEventListener('click', handler);
         });
     }
 
-    document.getElementById('btn-generate').onclick = function() {
+    bindClick('btn-generate', function() {
         const courts = parseInt(document.getElementById('court-count').value) || 1;
         if(players.length < 4) {
             alert('最低4人のメンバーが必要です。「⚙️ 設定」タブから追加してください。');
@@ -228,7 +528,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         renderMatches(bestMatches, resting);
-    };
+    });
 
     function renderMatches(matches, resting) {
         const container = document.getElementById('current-matches');
@@ -243,20 +543,20 @@ document.addEventListener("DOMContentLoaded", function () {
                     <div class="team">
                         <div class="player-chip">${m.team1[0].name}</div>
                         <div class="player-chip">${m.team1[1].name}</div>
-                        <button class="win-btn" data-winner="1" data-idx="${idx}">勝利！</button>
+                        <button class="win-btn" data-winner="1">勝利！</button>
                     </div>
-                    <div style="font-weight:bold; color:#95a5a6; padding:0 10px;">VS</div>
+                    <div class="vs-divider">VS</div>
                     <div class="team">
                         <div class="player-chip">${m.team2[0].name}</div>
                         <div class="player-chip">${m.team2[1].name}</div>
-                        <button class="win-btn" data-winner="2" data-idx="${idx}">勝利！</button>
+                        <button class="win-btn" data-winner="2">勝利！</button>
                     </div>
                 </div>
             `;
             container.appendChild(card);
 
             card.querySelectorAll('.win-btn').forEach(btn => {
-                btn.onclick = function() {
+                const handler = function() {
                     const winner = this.getAttribute('data-winner');
                     const wTeam = winner === '1' ? m.team1 : m.team2;
                     const lTeam = winner === '1' ? m.team2 : m.team1;
@@ -275,13 +575,52 @@ document.addEventListener("DOMContentLoaded", function () {
                     historyPairs[wKey] = (historyPairs[wKey] || 0) + 1;
                     historyPairs[lKey] = (historyPairs[lKey] || 0) + 1;
 
+                    // 履歴ログ追加
+                    matchLogs.unshift({
+                        id: Date.now(),
+                        court: m.court,
+                        winner: `${wTeam[0].name} & ${wTeam[1].name}`,
+                        loser: `${lTeam[0].name} & ${lTeam[1].name}`
+                    });
+
                     saveData();
-                    card.innerHTML = `<div style="text-align:center; padding:15px; font-weight:bold; color:var(--primary);">✅ チーム${winner}の勝利を記録しました</div>`;
+                    card.innerHTML = `<div style="text-align:center; padding:16px; font-weight:bold; color:var(--primary); font-size:0.95rem;">✅ チーム${winner}の勝利を記録しました</div>`;
                 };
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); handler.call(btn); }, {passive: false});
+                btn.addEventListener('click', handler);
             });
         });
 
         document.getElementById('resting-players').innerText = resting.length > 0 ? resting.map(p => p.name).join('、 ') : '全員出場中！';
+    }
+
+    // 履歴エリア描画関数
+    function renderHistory() {
+        const container = document.getElementById('match-history-list');
+        if(!container) return;
+        
+        if(matchLogs.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#888; padding:12px 0; font-size:0.9rem;">まだ終了した試合はありません</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        matchLogs.forEach((log, index) => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <div class="history-item-header">
+                    <span>第 ${matchLogs.length - index} 試合</span>
+                    <span>コート ${log.court}</span>
+                </div>
+                <div class="history-item-body">
+                    <span class="winner-text">🏆 ${log.winner}</span>
+                    <span style="font-size:0.8rem; color:#aaa; margin:0 6px;">vs</span>
+                    <span class="loser-text">${log.loser}</span>
+                </div>
+            `;
+            container.appendChild(div);
+        });
     }
 
     function renderRanking() {
@@ -298,11 +637,11 @@ document.addEventListener("DOMContentLoaded", function () {
             const rate = p.matches > 0 ? Math.round((p.wins / p.matches) * 100) : 0;
             tbody.innerHTML += `
                 <tr>
-                    <td style="font-weight:${idx===0?'bold':'normal'}; color:${idx===0?'#f39c12':'#333'}">${idx + 1}</td>
+                    <td style="font-weight:${idx===0?'bold':'normal'}; color:${idx===0?'#f39c12':'#333'}">${idx === 0 && p.matches > 0 ? '👑 1' : idx + 1}</td>
                     <td style="font-weight:bold;">${p.name}</td>
                     <td>${p.matches}</td>
                     <td>${p.wins}</td>
-                    <td>${rate}%</td>
+                    <td style="font-weight:bold; color:var(--primary);">${rate}%</td>
                 </tr>
             `;
         });
@@ -312,6 +651,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if(savedCourts) document.getElementById('court-count').value = savedCourts;
     renderSettings();
     renderRanking();
+    renderHistory();
 });
 </script>
 </body>
