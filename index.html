@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>テニス対戦管理アプリ</title>
+    <style>
+        :root { --primary: #2e7d32; --primary-light: #e8f5e9; --accent: #ff9800; --bg: #f4f6f4; --card: #fff; --text: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 80px; }
+        header { background: var(--primary); color: #fff; padding: 15px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 10; }
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; display: flex; border-top: 1px solid #ddd; z-index: 10; }
+        .tab-btn { flex: 1; padding: 15px 0; text-align: center; font-size: 0.9rem; color: #777; font-weight: bold; cursor: pointer; }
+        .tab-btn.active { color: var(--primary); border-top: 3px solid var(--primary); background: var(--primary-light); }
+        .page { display: none; padding: 15px; max-width: 600px; margin: 0 auto; }
+        .page.active { display: block; }
+        .card { background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        h2 { font-size: 1rem; color: var(--primary); margin-bottom: 10px; border-left: 4px solid var(--accent); padding-left: 8px; }
+        .btn { width: 100%; background: var(--primary); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; }
+        .btn:active { opacity: 0.8; }
+        .btn-accent { background: var(--accent); }
+        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
+        .input-group input { flex: 2; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; }
+        .input-group select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; }
+        .player-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .del-btn { background: #e74c3c; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
+        .match-card { border: 1px solid var(--primary-light); border-radius: 8px; margin-bottom: 15px; overflow: hidden; background: #fff; }
+        .match-header { background: var(--primary-light); padding: 8px; font-size: 0.9rem; font-weight: bold; color: var(--primary); text-align: center; }
+        .match-body { display: flex; align-items: center; justify-content: space-between; padding: 15px; }
+        .team { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 5px; }
+        .player-chip { background: #f1f2f6; padding: 6px; border-radius: 6px; font-size: 0.9rem; font-weight: bold; }
+        .win-btn { margin-top: 8px; background: #3498db; color: #fff; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .ranking-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .ranking-table th, .ranking-table td { padding: 10px; text-align: center; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .ranking-table th { background: var(--primary-light); color: var(--primary); }
+        .badge { background: #7f8c8d; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+    </style>
+</head>
+<body>
+
+<header>🎾 テニスマネージャー</header>
+
+<div id="page-match" class="page active">
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h2>現在の試合</h2>
+            <button class="btn btn-accent" style="width:auto; padding:8px 15px;" id="btn-generate">次の試合を組む</button>
+        </div>
+        <div id="current-matches">
+            <p style="text-align:center; color:#777; padding:20px 0;">「⚙️ 設定」タブでメンバーを4人以上追加してください</p>
+        </div>
+    </div>
+    <div class="card">
+        <h2>お休み（待機）</h2>
+        <div id="resting-players" style="font-size:0.9rem; color:#555;">待機メンバーはいません</div>
+    </div>
+</div>
+
+<div id="page-settings" class="page">
+    <div class="card">
+        <h2>コート設定</h2>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <label>利用コート数:</label>
+            <input type="number" id="court-count" value="1" min="1" max="10" style="padding:8px; width:60px; border:1px solid #ccc; border-radius:6px;">
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>メンバー追加</h2>
+        <div class="input-group">
+            <input type="text" id="new-name" placeholder="名前を入力">
+            <select id="new-level">
+                <option value="1">初心者</option>
+                <option value="2">初級</option>
+                <option value="3" selected>初中級</option>
+                <option value="4">中級</option>
+                <option value="5">中上級</option>
+                <option value="6">上級</option>
+            </select>
+            <button class="btn" id="btn-add-player" style="flex:1;">追加</button>
+        </div>
+        
+        <div style="display:flex; justify-content:space-between; margin:15px 0 5px;">
+            <span style="font-weight:bold; font-size:0.9rem;">登録メンバー (<span id="player-count">0</span>人)</span>
+            <button id="btn-reset-stats" style="background:none; border:none; color:#e74c3c; font-size:0.8rem; text-decoration:underline; cursor:pointer;">成績リセット</button>
+        </div>
+        <div id="player-list"></div>
+    </div>
+</div>
+
+<div id="page-ranking" class="page">
+    <div class="card">
+        <h2>勝率ランキング 👑</h2>
+        <table class="ranking-table">
+            <thead>
+                <tr>
+                    <th>順位</th>
+                    <th>名前</th>
+                    <th>試合</th>
+                    <th>勝</th>
+                    <th>勝率</th>
+                </tr>
+            </thead>
+            <tbody id="ranking-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="tab-bar">
+    <div class="tab-btn active" id="nav-match">🎾 試合</div>
+    <div class="tab-btn" id="nav-ranking">👑 成績</div>
+    <div class="tab-btn" id="nav-settings">⚙️ 設定</div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    let players = JSON.parse(localStorage.getItem('tennis_players')) || [];
+    let historyPairs = JSON.parse(localStorage.getItem('tennis_history_pairs')) || {};
+    const levelLabels = { 1:"初心者", 2:"初級", 3:"初中級", 4:"中級", 5:"中上級", 6:"上級" };
+
+    function saveData() {
+        localStorage.setItem('tennis_players', JSON.stringify(players));
+        localStorage.setItem('tennis_history_pairs', JSON.stringify(historyPairs));
+        localStorage.setItem('tennis_courts', document.getElementById('court-count').value);
+        renderSettings();
+        renderRanking();
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('page-' + tabId).classList.add('active');
+        document.getElementById('nav-' + tabId).classList.add('active');
+        if (tabId === 'ranking') renderRanking();
+    }
+
+    document.getElementById('nav-match').onclick = () => switchTab('match');
+    document.getElementById('nav-ranking').onclick = () => switchTab('ranking');
+    document.getElementById('nav-settings').onclick = () => switchTab('settings');
+
+    document.getElementById('btn-add-player').onclick = function() {
+        const nameInput = document.getElementById('new-name');
+        const levelInput = document.getElementById('new-level');
+        const name = nameInput.value.trim();
+        if(!name) return;
+        
+        players.push({
+            id: Date.now().toString(),
+            name: name,
+            level: parseInt(levelInput.value),
+            matches: 0,
+            wins: 0
+        });
+        nameInput.value = '';
+        saveData();
+    };
+
+    document.getElementById('btn-reset-stats').onclick = function() {
+        if(confirm('試合数と勝敗データをリセットしますか？')) {
+            players.forEach(p => { p.matches = 0; p.wins = 0; });
+            historyPairs = {};
+            document.getElementById('current-matches').innerHTML = '<p style="text-align:center; color:#777; padding:20px 0;">「次の試合を組む」を押してください</p>';
+            saveData();
+        }
+    };
+
+    function renderSettings() {
+        const list = document.getElementById('player-list');
+        list.innerHTML = '';
+        document.getElementById('player-count').innerText = players.length;
+        
+        players.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'player-item';
+            div.innerHTML = `
+                <div>
+                    <span style="font-weight:bold;">${p.name}</span> 
+                    <span class="badge">${levelLabels[p.level] || '-'}</span>
+                </div>
+                <button class="del-btn" data-id="${p.id}">削除</button>
+            `;
+            list.appendChild(div);
+        });
+
+        document.querySelectorAll('.del-btn').forEach(btn => {
+            btn.onclick = function() {
+                const id = this.getAttribute('data-id');
+                players = players.filter(p => p.id !== id);
+                saveData();
+            };
+        });
+    }
+
+    document.getElementById('btn-generate').onclick = function() {
+        const courts = parseInt(document.getElementById('court-count').value) || 1;
+        if(players.length < 4) {
+            alert('最低4人のメンバーが必要です。「⚙️ 設定」タブから追加してください。');
+            return;
+        }
+
+        let sorted = [...players].sort(() => Math.random() - 0.5).sort((a, b) => a.matches - b.matches);
+        const need = Math.min(courts * 4, Math.floor(players.length / 4) * 4);
+        const selected = sorted.slice(0, need);
+        const resting = sorted.slice(need);
+
+        let bestMatches = [], bestScore = Infinity;
+
+        for(let iter = 0; iter < 100; iter++) {
+            let temp = [...selected].sort(() => Math.random() - 0.5);
+            let curMatches = [], score = 0;
+
+            for(let i=0; i<temp.length; i+=4) {
+                const t1 = [temp[i], temp[i+1]], t2 = [temp[i+2], temp[i+3]];
+                score += Math.abs((t1[0].level + t1[1].level) - (t2[0].level + t2[1].level)) * 10;
+                
+                const p1Key = [t1[0].id, t1[1].id].sort().join('_');
+                const p2Key = [t2[0].id, t2[1].id].sort().join('_');
+                if(historyPairs[p1Key]) score += historyPairs[p1Key] * 50;
+                if(historyPairs[p2Key]) score += historyPairs[p2Key] * 50;
+
+                curMatches.push({ team1: t1, team2: t2, court: (i/4)+1 });
+            }
+
+            if(score < bestScore) {
+                bestScore = score;
+                bestMatches = curMatches;
+            }
+        }
+
+        renderMatches(bestMatches, resting);
+    };
+
+    function renderMatches(matches, resting) {
+        const container = document.getElementById('current-matches');
+        container.innerHTML = '';
+        
+        matches.forEach((m, idx) => {
+            const card = document.createElement('div');
+            card.className = 'match-card';
+            card.innerHTML = `
+                <div class="match-header">コート ${m.court}</div>
+                <div class="match-body">
+                    <div class="team">
+                        <div class="player-chip">${m.team1[0].name}</div>
+                        <div class="player-chip">${m.team1[1].name}</div>
+                        <button class="win-btn" data-winner="1" data-idx="${idx}">勝利！</button>
+                    </div>
+                    <div style="font-weight:bold; color:#95a5a6; padding:0 10px;">VS</div>
+                    <div class="team">
+                        <div class="player-chip">${m.team2[0].name}</div>
+                        <div class="player-chip">${m.team2[1].name}</div>
+                        <button class="win-btn" data-winner="2" data-idx="${idx}">勝利！</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+
+            card.querySelectorAll('.win-btn').forEach(btn => {
+                btn.onclick = function() {
+                    const winner = this.getAttribute('data-winner');
+                    const wTeam = winner === '1' ? m.team1 : m.team2;
+                    const lTeam = winner === '1' ? m.team2 : m.team1;
+
+                    [...wTeam, ...lTeam].forEach(p => {
+                        const target = players.find(pl => pl.id === p.id);
+                        if(target) target.matches++;
+                    });
+                    wTeam.forEach(p => {
+                        const target = players.find(pl => pl.id === p.id);
+                        if(target) target.wins++;
+                    });
+
+                    const wKey = [wTeam[0].id, wTeam[1].id].sort().join('_');
+                    const lKey = [lTeam[0].id, lTeam[1].id].sort().join('_');
+                    historyPairs[wKey] = (historyPairs[wKey] || 0) + 1;
+                    historyPairs[lKey] = (historyPairs[lKey] || 0) + 1;
+
+                    saveData();
+                    card.innerHTML = `<div style="text-align:center; padding:15px; font-weight:bold; color:var(--primary);">✅ チーム${winner}の勝利を記録しました</div>`;
+                };
+            });
+        });
+
+        document.getElementById('resting-players').innerText = resting.length > 0 ? resting.map(p => p.name).join('、 ') : '全員出場中！';
+    }
+
+    function renderRanking() {
+        const tbody = document.getElementById('ranking-body');
+        tbody.innerHTML = '';
+        
+        let sorted = [...players].sort((a, b) => {
+            const rateA = a.matches > 0 ? (a.wins / a.matches) : 0;
+            const rateB = b.matches > 0 ? (b.wins / b.matches) : 0;
+            return rateB !== rateA ? rateB - rateA : b.wins - a.wins;
+        });
+
+        sorted.forEach((p, idx) => {
+            const rate = p.matches > 0 ? Math.round((p.wins / p.matches) * 100) : 0;
+            tbody.innerHTML += `
+                <tr>
+                    <td style="font-weight:${idx===0?'bold':'normal'}; color:${idx===0?'#f39c12':'#333'}">${idx + 1}</td>
+                    <td style="font-weight:bold;">${p.name}</td>
+                    <td>${p.matches}</td>
+                    <td>${p.wins}</td>
+                    <td>${rate}%</td>
+                </tr>
+            `;
+        });
+    }
+
+    const savedCourts = localStorage.getItem('tennis_courts');
+    if(savedCourts) document.getElementById('court-count').value = savedCourts;
+    renderSettings();
+    renderRanking();
+});
+</script>
+</body>
+</html>
