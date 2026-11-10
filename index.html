@@ -5019,6 +5019,8 @@ document.addEventListener("DOMContentLoaded", function () {
     let matchLogs = JSON.parse(localStorage.getItem('tennis_match_logs')) || [];
     let activeMatches = JSON.parse(localStorage.getItem('tennis_active_matches')) || [];
     let activeResting = JSON.parse(localStorage.getItem('tennis_active_resting')) || [];
+    // 休みの連続回数（streak）と、その回を組む前の値（base：組み直し用）
+    let restInfo = JSON.parse(localStorage.getItem('tennis_rest_streak')) || { streak: {}, base: {} };
 
     const levelLabels = { 1:"初心者", 2:"初級", 3:"初中級", 4:"中級", 5:"中上級", 6:"上級" };
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -5053,6 +5055,8 @@ document.addEventListener("DOMContentLoaded", function () {
     let soundOn = localStorage.getItem('tennis_sound') === '1';
     let audioCtx = null, hitBuf = null, hitLoading = null;
     function getCtx() {
+        // iPhoneでホームに戻ると、音の再生装置(AudioContext)が「中断」や「閉じた」状態になることがある。壊れていたら作り直す
+        if (audioCtx && audioCtx.state === 'closed') { audioCtx = null; }
         if (!audioCtx) {
             const AC = window.AudioContext || window.webkitAudioContext;
             if (!AC) return null;
@@ -5068,24 +5072,47 @@ document.addEventListener("DOMContentLoaded", function () {
         const bytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
         hitLoading = new Promise(function(res, rej) { ctx.decodeAudioData(bytes.buffer, res, rej); })
-            .then(function(buf) { hitBuf = buf; })
+            .then(function(buf) { hitBuf = buf; hitLoading = null; })
             .catch(function() { hitLoading = null; });
+    }
+    // 画面に触れた瞬間に、止まっている再生装置を起こす（iOSは「指で触った瞬間」でないと起こせない）
+    function wakeAudio() {
+        const ctx = audioCtx;
+        if (!ctx || ctx.state === 'running') return Promise.resolve(ctx);
+        // 無音を一瞬鳴らすと、iOSのロックが確実に外れる
+        try {
+            const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
+            s.buffer = b; s.connect(ctx.destination); s.start(0);
+        } catch (e) {}
+        const p = ctx.resume ? ctx.resume() : Promise.resolve();
+        return Promise.resolve(p).then(function() {
+            if (ctx.state !== 'running') throw new Error('not running');
+            return ctx;
+        }).catch(function() {
+            // 起きなかったら作り直す（音源は読み込み済みのものを使い回す）
+            try { ctx.close(); } catch (e) {}
+            audioCtx = null;
+            const n = getCtx();
+            if (n && n.resume) n.resume();
+            return n;
+        });
     }
     // delay 秒後に「パンッ」が鳴り始める（音が出せなくてもアプリは止めない）
     function playHit(delay) {
         if (!soundOn) return;
         try {
-            const ctx = getCtx();
-            if (!ctx) return;
-            if (ctx.state === 'suspended') ctx.resume();
-            const go = function() {
+            if (!getCtx()) return;
+            if (!hitBuf) loadHit();
+            const go = function(ctx) {
+                if (!ctx || !hitBuf) return;
                 const src = ctx.createBufferSource();
                 src.buffer = hitBuf;
                 src.connect(ctx.destination);
                 src.start(ctx.currentTime + Math.max(0, delay || 0));
             };
-            if (hitBuf) go();
-            else { loadHit(); if (hitLoading) hitLoading.then(function() { if (hitBuf) go(); }); }
+            const ready = hitBuf ? Promise.resolve() : (hitLoading || Promise.resolve());
+            if (audioCtx.state === 'running' && hitBuf) go(audioCtx);
+            else Promise.all([wakeAudio(), ready]).then(function(r) { go(r[0] || audioCtx); });
         } catch (e) { /* 無視 */ }
     }
     const sfx = {
@@ -5093,7 +5120,20 @@ document.addEventListener("DOMContentLoaded", function () {
         smash: function() { playHit(Math.max(0, SMASH_IMPACT - HIT_ONSET)); }   // 演出のインパクトに「パンッ」を合わせる
     };
     if (soundOn) loadHit();
-    document.addEventListener('pointerdown', function() { if (soundOn) loadHit(); }, { once: true });
+    // 触るたびに（1回きりではなく毎回）再生装置の状態を確認して起こす
+    ['pointerdown', 'touchend'].forEach(function(type) {
+        document.addEventListener(type, function() {
+            if (!soundOn) return;
+            getCtx(); loadHit(); wakeAudio();
+        }, { passive: true, capture: true });
+    });
+    // ホーム画面に行くときは自分から一時停止、戻ってきたら起こしにいく
+    document.addEventListener('visibilitychange', function() {
+        if (!audioCtx) return;
+        if (document.hidden) { try { audioCtx.suspend(); } catch (e) {} }
+        else if (soundOn) { wakeAudio(); }
+    });
+    window.addEventListener('pageshow', function(e) { if (e.persisted && soundOn && audioCtx) wakeAudio(); });
 
     // 操作ボタンを押したら、全部この音。勝利ボタンと試し打ちは専用のタイミングで鳴らすので、ここでは除く
     document.addEventListener('click', function(e) {
@@ -5176,6 +5216,7 @@ document.addEventListener("DOMContentLoaded", function () {
         localStorage.setItem('tennis_match_logs', JSON.stringify(matchLogs));
         localStorage.setItem('tennis_active_matches', JSON.stringify(activeMatches));
         localStorage.setItem('tennis_active_resting', JSON.stringify(activeResting));
+        localStorage.setItem('tennis_rest_streak', JSON.stringify(restInfo));
         localStorage.setItem('tennis_courts', document.getElementById('court-count').value);
         renderSettings();
         renderRanking();
@@ -5249,6 +5290,7 @@ document.addEventListener("DOMContentLoaded", function () {
             matchLogs = [];
             activeMatches = [];
             activeResting = [];
+            restInfo = { streak: {}, base: {} };
             document.getElementById('current-matches').innerHTML = '<p class="empty"><span class="big">🎾</span>「次の試合を組む」を押してください</p>';
             saveData();
             toast('✨ リセットが完了しました');
@@ -5325,10 +5367,23 @@ document.addEventListener("DOMContentLoaded", function () {
         btn.classList.add('rolling');
         buzz(15);
 
-        let sorted = activePlayers.slice().sort(function() { return Math.random() - 0.5; }).sort(function(a, b) { return a.matches - b.matches; });
+        // まだ1試合も結果が入っていない状態で押した＝「組み直し」。その回の休みは数えずにやり直す
+        const isReroll = activeMatches.length > 0 && activeMatches.every(function(m) { return !m.finished; });
+        if (isReroll) restInfo.streak = Object.assign({}, restInfo.base);
+        else restInfo.base = Object.assign({}, restInfo.streak);
+        const streakOf = function(p) { return restInfo.streak[p.id] || 0; };
+
+        // 出る人の決め方：①休みが続いている人を最優先 → ②試合数が少ない人 → ③同じならランダム
+        let sorted = activePlayers.slice().sort(function() { return Math.random() - 0.5; }).sort(function(a, b) {
+            return (streakOf(b) - streakOf(a)) || (a.matches - b.matches);
+        });
         const need = Math.min(courts * 4, Math.floor(activePlayers.length / 4) * 4);
         const selected = sorted.slice(0, need);
         activeResting = sorted.slice(need);
+
+        const nextStreak = {};
+        activeResting.forEach(function(p) { nextStreak[p.id] = streakOf(p) + 1; });
+        restInfo.streak = nextStreak;   // 出る人は0に戻る
 
         let bestMatches = [], bestScore = Infinity;
 
